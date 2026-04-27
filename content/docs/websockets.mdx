@@ -1,0 +1,58 @@
+---
+title: WebSockets
+description: Real-time communication with Flask-SocketIO
+---
+
+## Real-Time Communication with WebSockets
+
+### Beyond Request-Response
+
+Traditional web applications operate on a strict request-response cycle: the client asks for data, and the server provides it. Once the transaction is finished, the connection closes. However, modern features like live chat, real-time dashboards, and collaborative editing require a persistent, bidirectional connection.
+
+### Understanding the WebSocket Protocol
+
+WebSockets allow for a full-duplex communication channel over a single, long-lived connection. Unlike HTTP, which requires a new header exchange for every request, WebSockets allow data to flow instantly in both directions without overhead.
+
+### Key Terminology
+
+- **Polling:** The client repeatedly asks the server for updates. This is inefficient.
+- **Events:** Instead of URLs, WebSockets use named events (for example, `"message_sent"` or `"user_joined"`).
+- **Emitting:** Sending an event and its data to the other party.
+- **Broadcasting:** Sending an event to every connected client simultaneously.
+
+### Implementing Flask-SocketIO
+
+To integrate real-time features into Flask, we use the Flask-SocketIO library.
+
+#### Server-Side Setup
+
+```python
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+
+@socketio.on('my_event')
+def handle_my_custom_event(json):
+    print('received json: ' + str(json))
+    # Broadcast to all connected clients
+    emit('my_response', json, broadcast=True)
+
+if __name__ == '__main__':
+    socketio.run(app)
+```
+
+#### Client-Side Setup (JavaScript)
+
+```javascript
+const socket = io();
+
+// Sending data to the server
+socket.emit('my_event', {data: 'Hello Server!'});
+
+// Catching data from the server
+socket.on('my_response', function(msg) {
+    console.log('Server says: ' + msg.data);
+});
+```
