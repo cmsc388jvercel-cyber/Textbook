@@ -64,6 +64,33 @@ Add in Vercel dashboard (Settings -> Environment Variables) as needed.
 
 ### MongoDB Atlas
 
-The previous TAs wrote [instructions on setting up MongoDB Atlas](https://docs.google.com/presentation/d/10FYe5QyPJwPABB4ThI79u7TDqR6tThxM/edit?slide=id.g28232355b3d_2_10#slide=id.g28232355b3d_2_10) that you should use. 
+Since Vercel's serverless functions have no persistent disk or memory between invocations, your database has to live somewhere else. [MongoDB Atlas](https://www.mongodb.com/atlas) is a free, managed way to host that database.
 
-Also, if you are using another database provider, you will have to use separate deployments from Vercel as well.
+1. Create an account and a free cluster
+
+Sign up at [cloud.mongodb.com](https://cloud.mongodb.com), then click **Create** and choose the **M0 (Free)** tier. Pick any cloud provider/region and give the cluster a name (you can't rename it later). It'll be ready in well under a minute. You only get one Free cluster per project, which is plenty for this course.
+
+2. Create a database user
+
+Atlas will prompt you with a "Security Quickstart" right after cluster creation. Set a username and password here — this is what your app authenticates with, separate from your Atlas login. You can add more users later under **Database Access**.
+
+3. Configure network access
+
+Under **Network Access**, add an IP to the access list. For local development, "Add My Current IP Address" works. **For your Vercel deployment, you need to allow access from anywhere (`0.0.0.0/0`)**, because Vercel's serverless functions run from dynamic IPs that change between invocations — Atlas can't allowlist a single fixed IP for them. This is MongoDB's own documented recommendation for serverless platforms, not a security shortcut we're taking for convenience. You'll get a security alert email from Atlas when you add it — that's expected. Your database is still protected by the username/password from step 2.
+
+4. Get your connection string
+
+Go to your cluster, click **Connect** → **Drivers**, and select Python. Atlas gives you a connection string that looks like:
+
+```
+mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+```
+
+Swap in your actual username and password, and add your database name after the `.net/` if your app expects one. Set this as an environment variable in your Vercel project (Settings → Environment Variables) — the same `MONGODB_HOST` (or equivalent) variable name your app already reads locally from `.env`. Never commit this string to your repo.
+
+5. A couple of serverless-specific gotchas
+
+- Create your `MongoClient` (or call MongoEngine's `connect()`) once at module scope, not inside a view function. Vercel reuses "warm" containers between requests, so a module-level client gets reused instead of reconnecting every time.
+- Cold starts add a bit of latency on the first request to a fresh container — that's expected on the free tier and isn't something you can code around.
+
+If you're using a database provider other than Atlas, you'll need to set up your own separate deployment for it — Vercel only hosts your Flask app, not a database.
